@@ -34,8 +34,11 @@ yarn-error.log*
 # Testing
 coverage/
 .nyc_output/
-.nyc_output/
 *.lcov
+test-results/
+junit.xml
+*.test.js
+*.test.js.map
 
 # TypeScript
 *.tsbuildinfo
