@@ -1,7 +1,7 @@
 {
   "name": "nodrift",
-  "version": "1.0.0",
-  "description": "Smart Contract State Verification - Monitor and verify Ethereum smart contract state matches your YAML configuration. Perfect for CI/CD, audits, and drift detection.",
+  "version": "2.0.0",
+  "description": "Smart Contract State Verification (Enterprise Edition) - Monitor and verify Ethereum smart contract state with plugins, events, and advanced architecture. Perfect for CI/CD, audits, and drift detection.",
   "keywords": [
     "ethereum",
     "smart-contracts",
@@ -58,12 +58,15 @@
     "dotenv": "^16.3.1",
     "ethers": "^6.9.0",
     "inquirer": "^13.1.0",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "uuid": "^13.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/jest": "^29.5.11",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.10.0",
+    "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
     "@typescript-eslint/parser": "^6.15.0",
     "eslint": "^8.56.0",

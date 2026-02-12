@@ -42,7 +42,7 @@ npm run dev -- examples/risk-management/01-treasury-allocation.yaml
 npm run dev -- examples/risk-management/02-liquidity-pool-health.yaml
 ```
 
-## Examples by Category: Examples by Category
+## Examples by Category:
 
 ### Basic Examples
 
@@ -94,7 +94,7 @@ Monitor treasury allocations and liquidity pool health:
 | **Protocol Solvency** | [`risk-management/03-protocol-solvency-check.yaml`](risk-management/03-protocol-solvency-check.yaml) | Verify protocol backing | Multi-contract solvency verification |
 | **Metrics and Severity System: Comprehensive Metrics** | [`risk-management/04-comprehensive-metrics.yaml`](risk-management/04-comprehensive-metrics.yaml) | **Full metrics system demo** | **All severity levels, categories, and risk metrics** |
 
-## What Each Example Teaches: What Each Example Teaches
+## What Each Example Teaches: 
 
 ### 1. Basic Token Verification ([`basic/01-erc20-token.yaml`](basic/01-erc20-token.yaml))
 

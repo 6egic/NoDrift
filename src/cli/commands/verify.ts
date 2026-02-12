@@ -20,6 +20,7 @@ import { getExitCode } from '../../common/exit-codes';
 import { getOutputHandler } from '../../output/handlers';
 import { calculateStats } from '../../output/stats';
 import { printHeader } from '../../output/formatters';
+import { unwrap } from '../../common/result-type';
 
 const logger = getLogger();
 
@@ -87,7 +88,8 @@ export async function handleVerify(configFile: string, options: VerifyOptions): 
   // Run verification with progress tracking
   const config = loadSchema(configFile);
   const nodrift = new Nodrift(config);
-  const result = await nodrift.run();
+  const resultWrapper = await nodrift.run();
+  const result = unwrap(resultWrapper);
   
   const executionTimeMs = Date.now() - startTime;
 

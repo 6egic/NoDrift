@@ -63,21 +63,29 @@ Nodrift is a blockchain state verification tool designed with enterprise-grade a
 
 **Responsibilities**:
 - Load and parse YAML configuration files
-- Validate configuration against schema
+- Validate configuration against schema using Zod
 - Support for includes, templates, and presets
 - Variable resolution (env vars, file loading, command execution)
 - ABI loading from multiple sources (Foundry, Hardhat, Truffle, plain JSON)
 
 **Key Files**:
 - [`config-loader.ts`](../src/config/config-loader.ts) - Configuration loading and processing
-- [`config-validator.ts`](../src/config/config-validator.ts) - Validation logic
-- [`schema.ts`](../src/config/schema.ts) - Configuration schema definition
-- [`types.ts`](../src/config/types.ts) - Type definitions
+- [`config-validator.ts`](../src/config/config-validator.ts) - Validation logic with Zod integration
+- [`schema.ts`](../src/config/schema.ts) - Configuration schema definition using Zod
+- [`zod-schemas.ts`](../src/config/zod-schemas.ts) - Zod schema definitions with type inference
+- [`types.ts`](../src/config/types.ts) - Type definitions (re-exported from Zod schemas)
 
 **Design Patterns**:
 - Builder pattern for configuration construction
 - Strategy pattern for different ABI sources
 - Template Method for configuration processing pipeline
+- Schema-first design with Zod for runtime type safety
+
+**Validation Architecture**:
+- Zod schemas provide both runtime validation and TypeScript type inference
+- Single source of truth for types and validation rules
+- Enhanced error messages with detailed field paths
+- Type-safe configuration with automatic type inference
 
 ### 2. Chain Reader Layer
 
