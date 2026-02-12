@@ -1,0 +1,897 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://nodrift.dev/schema/v1",
+  "title": "Nodrift Configuration Schema",
+  "description": "Production-grade schema for Nodrift smart contract state verification configuration",
+  "type": "object",
+  "required": ["network", "contracts"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for IDE support",
+      "format": "uri"
+    },
+    "version": {
+      "type": "string",
+      "description": "Configuration version for compatibility tracking",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$",
+      "examples": ["1.0", "1.0.0"]
+    },
+    "network": {
+      "$ref": "#/definitions/NetworkConfig",
+      "description": "Default network configuration for all contracts"
+    },
+    "contracts": {
+      "type": "object",
+      "description": "Contract configurations to verify (key is contract identifier)",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/definitions/ContractConfig"
+      }
+    },
+    "imports": {
+      "type": "array",
+      "description": "List of config files to import and merge (processed in order)",
+      "items": {
+        "type": "string",
+        "description": "Path to config file (relative or absolute)",
+        "minLength": 1
+      },
+      "uniqueItems": true,
+      "examples": [["./configs/templates.yaml", "./configs/networks.yaml"]]
+    },
+    "includes": {
+      "type": "array",
+      "description": "Alias for imports - list of config files to import and merge",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "templates": {
+      "type": "object",
+      "description": "Reusable contract templates (referenced via 'template' field)",
+      "additionalProperties": {
+        "$ref": "#/definitions/ContractTemplate"
+      }
+    },
+    "globals": {
+      "type": "object",
+      "description": "Global configuration options",
+      "additionalProperties": false,
+      "properties": {
+        "timeout": {
+          "type": "integer",
+          "description": "Global timeout in milliseconds for RPC calls",
+          "minimum": 1000,
+          "maximum": 300000,
+          "default": 30000
+        },
+        "retries": {
+          "type": "integer",
+          "description": "Number of retry attempts for failed RPC calls",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 3
+        },
+        "concurrency": {
+          "type": "integer",
+          "description": "Maximum concurrent RPC requests",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 10
+        },
+        "fail_fast": {
+          "type": "boolean",
+          "description": "Stop verification on first failure",
+          "default": false
+        }
+      }
+    }
+  },
+  "definitions": {
+    "NetworkConfig": {
+      "type": "object",
+      "description": "Network configuration for blockchain connection",
+      "required": ["rpc_url", "chain_id"],
+      "additionalProperties": false,
+      "properties": {
+        "rpc_url": {
+          "type": "string",
+          "description": "RPC endpoint URL (supports ${ENV_VAR} syntax for environment variables)",
+          "minLength": 1,
+          "pattern": "^(https?://|wss?://|\\$\\{[A-Z_][A-Z0-9_]*\\})",
+          "examples": ["${RPC_URL}", "https://mainnet.infura.io/v3/YOUR_KEY", "wss://eth-mainnet.g.alchemy.com/v2/YOUR_KEY"]
+        },
+        "chain_id": {
+          "type": "integer",
+          "description": "Chain ID (1=Ethereum Mainnet, 137=Polygon, 56=BSC, 42161=Arbitrum, etc.)",
+          "minimum": 1,
+          "examples": [1, 137, 56, 42161, 10, 8453]
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Network-specific timeout in milliseconds",
+          "minimum": 1000,
+          "maximum": 300000
+        },
+        "retries": {
+          "type": "integer",
+          "description": "Network-specific retry attempts",
+          "minimum": 0,
+          "maximum": 10
+        }
+      }
+    },
+    "ContractConfig": {
+      "type": "object",
+      "description": "Configuration for a single contract verification",
+      "required": ["address"],
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "type": "string",
+          "description": "Contract address (supports ${ENV_VAR} syntax)",
+          "pattern": "^(0x[a-fA-F0-9]{40}|\\$\\{[A-Z_][A-Z0-9_]*\\})$",
+          "examples": ["0x1234567890123456789012345678901234567890", "${TOKEN_ADDRESS}"]
+        },
+        "abi": {
+          "description": "Contract ABI - inline array or file reference",
+          "oneOf": [
+            {
+              "type": "array",
+              "description": "Inline ABI array (include only functions needed for verification)",
+              "items": {
+                "$ref": "#/definitions/ABIEntry"
+              },
+              "minItems": 1
+            },
+            {
+              "type": "string",
+              "description": "File reference to load ABI from (Hardhat/Truffle artifacts or plain ABI file)",
+              "pattern": "^\\$\\{file:.+\\}$",
+              "examples": ["${file:./artifacts/contracts/Token.sol/Token.json}", "${file:./abis/Token.abi.json}"]
+            }
+          ]
+        },
+        "template": {
+          "type": "string",
+          "description": "YAML template name to use (must be defined in templates section or imported)",
+          "minLength": 1,
+          "examples": ["erc20-base", "proxy-erc1967", "governance-base"]
+        },
+        "preset": {
+          "type": "string",
+          "description": "Built-in TypeScript preset for common standards",
+          "enum": ["erc20", "erc721", "erc1155", "erc4626", "diamond", "proxy", "accessControl"],
+          "examples": ["erc20", "erc721", "diamond"]
+        },
+        "network": {
+          "$ref": "#/definitions/NetworkConfig",
+          "description": "Contract-specific network override"
+        },
+        "state": {
+          "type": "object",
+          "description": "State entries to verify (optional if using preset)",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/definitions/StateEntry"
+          }
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable/disable this contract verification",
+          "default": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this contract",
+          "maxLength": 500
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "not": {
+              "anyOf": [
+                { "required": ["preset"] },
+                { "required": ["template"] }
+              ]
+            }
+          },
+          "then": {
+            "required": ["state"],
+            "errorMessage": "Either 'preset', 'template', or 'state' must be provided"
+          }
+        },
+        {
+          "if": {
+            "required": ["preset"]
+          },
+          "then": {
+            "not": {
+              "required": ["template"]
+            },
+            "errorMessage": "Cannot use both 'preset' and 'template' - choose one"
+          }
+        }
+      ]
+    },
+    "ContractTemplate": {
+      "type": "object",
+      "description": "Reusable contract template definition",
+      "additionalProperties": false,
+      "properties": {
+        "abi": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ABIEntry"
+              }
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{file:.+\\}$"
+            }
+          ]
+        },
+        "state": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/StateEntry"
+          }
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "ABIEntry": {
+      "type": "object",
+      "description": "Single ABI entry (function, event, etc.)",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": ["function", "constructor", "event", "fallback", "receive"]
+        },
+        "stateMutability": {
+          "type": "string",
+          "enum": ["pure", "view", "nonpayable", "payable"]
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "StateEntry": {
+      "type": "object",
+      "description": "Single state verification entry",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "owner",
+            "role",
+            "variable",
+            "function_call",
+            "storage_slot",
+            "cross_contract",
+            "aggregate",
+            "conditional",
+            "time_based",
+            "comparison",
+            "array_state",
+            "mapping_state",
+            "proxy"
+          ],
+          "description": "Type of state verification to perform"
+        },
+        "value": {
+          "description": "Expected value (supports ${ENV_VAR} syntax)",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" },
+            { "type": "array" },
+            { "type": "object" },
+            { "type": "null" }
+          ]
+        },
+        "variable": {
+          "type": "string",
+          "description": "Variable name (for type: variable)",
+          "minLength": 1
+        },
+        "function": {
+          "type": "string",
+          "description": "Function name to call",
+          "minLength": 1
+        },
+        "args": {
+          "type": "array",
+          "description": "Function arguments (supports ${ENV_VAR} syntax in strings)",
+          "items": {}
+        },
+        "tolerance": {
+          "description": "Tolerance for numeric comparison (absolute number or percentage)",
+          "oneOf": [
+            { 
+              "type": "number",
+              "minimum": 0
+            },
+            { 
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?%$",
+              "examples": ["1%", "0.5%", "10%"]
+            }
+          ]
+        },
+        "range": {
+          "type": "object",
+          "description": "Acceptable range for numeric values",
+          "additionalProperties": false,
+          "properties": {
+            "min": { 
+              "type": "number",
+              "description": "Minimum acceptable value (inclusive)"
+            },
+            "max": { 
+              "type": "number",
+              "description": "Maximum acceptable value (inclusive)"
+            }
+          },
+          "anyOf": [
+            { "required": ["min"] },
+            { "required": ["max"] }
+          ]
+        },
+        "pattern": {
+          "description": "Regex pattern for string matching",
+          "oneOf": [
+            { 
+              "type": "string",
+              "minLength": 1,
+              "description": "Regular expression pattern"
+            },
+            { 
+              "type": "boolean",
+              "const": true,
+              "description": "Use 'value' field as regex pattern"
+            }
+          ]
+        },
+        "ignore_case": {
+          "type": "boolean",
+          "description": "Case-insensitive string comparison",
+          "default": false
+        },
+        "allow_empty": {
+          "type": "boolean",
+          "description": "Allow empty arrays/strings",
+          "default": false
+        },
+        "ignore_order": {
+          "type": "boolean",
+          "description": "Ignore array element order in comparison",
+          "default": false
+        },
+        "slot": {
+          "type": "string",
+          "description": "Storage slot (hex) for type: storage_slot",
+          "pattern": "^0x[a-fA-F0-9]{64}$",
+          "examples": ["0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"]
+        },
+        "slot_name": {
+          "type": "string",
+          "description": "Named storage slot constant",
+          "enum": ["IMPLEMENTATION_SLOT", "ADMIN_SLOT", "BEACON_SLOT"],
+          "examples": ["IMPLEMENTATION_SLOT"]
+        },
+        "operation": {
+          "type": "string",
+          "enum": ["sum", "average", "count", "min", "max"],
+          "description": "Aggregate operation to perform"
+        },
+        "args_source": {
+          "type": "string",
+          "enum": ["list", "function"],
+          "description": "Source of arguments for aggregate operations",
+          "default": "list"
+        },
+        "args_function": {
+          "type": "string",
+          "description": "Function to call to get arguments for aggregate",
+          "minLength": 1
+        },
+        "filter": {
+          "type": "object",
+          "description": "Filter criteria for aggregate operations",
+          "required": ["operator", "value"],
+          "additionalProperties": false,
+          "properties": {
+            "field": { 
+              "type": "string",
+              "description": "Field name to filter on",
+              "minLength": 1
+            },
+            "operator": {
+              "type": "string",
+              "enum": [
+                "equals",
+                "not_equals",
+                "greater_than",
+                "less_than",
+                "greater_than_or_equal",
+                "less_than_or_equal",
+                "contains",
+                "contains_all",
+                "contains_any",
+                "starts_with",
+                "ends_with"
+              ]
+            },
+            "value": {
+              "description": "Value to compare against"
+            }
+          }
+        },
+        "condition": {
+          "$ref": "#/definitions/ConditionalConfig",
+          "description": "Condition that must be met for verification to run"
+        },
+        "left": {
+          "$ref": "#/definitions/ComparisonSource",
+          "description": "Left side of comparison"
+        },
+        "right": {
+          "$ref": "#/definitions/ComparisonSource",
+          "description": "Right side of comparison"
+        },
+        "operator": {
+          "type": "string",
+          "enum": [
+            "equals",
+            "not_equals",
+            "greater_than",
+            "less_than",
+            "greater_than_or_equal",
+            "less_than_or_equal",
+            "contains",
+            "contains_all",
+            "contains_any",
+            "starts_with",
+            "ends_with"
+          ],
+          "description": "Comparison operator"
+        },
+        "check": {
+          "type": "string",
+          "enum": ["length", "contains", "contains_all", "contains_any"],
+          "description": "Array check type"
+        },
+        "key": {
+          "description": "Mapping key to check (supports ${ENV_VAR} syntax)",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" },
+            { "type": "boolean" },
+            { "type": "array" }
+          ]
+        },
+        "max_age_seconds": {
+          "type": "integer",
+          "description": "Maximum age in seconds for time-based checks",
+          "minimum": 1,
+          "examples": [300, 3600, 86400]
+        },
+        "stale_action": {
+          "type": "string",
+          "enum": ["error", "warning"],
+          "description": "Action to take when data is stale",
+          "default": "error"
+        },
+        "time_bounds": {
+          "type": "object",
+          "description": "Time bounds for time-based verification",
+          "additionalProperties": false,
+          "properties": {
+            "min_age": { 
+              "type": "integer",
+              "minimum": 0,
+              "description": "Minimum age in seconds"
+            },
+            "max_age": { 
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum age in seconds"
+            }
+          }
+        },
+        "source_contract": {
+          "type": "string",
+          "description": "Source contract name for cross-contract checks",
+          "minLength": 1
+        },
+        "source_function": {
+          "type": "string",
+          "description": "Source function name for cross-contract checks",
+          "minLength": 1
+        },
+        "target_contract": {
+          "type": "string",
+          "description": "Target contract name for cross-contract checks",
+          "minLength": 1
+        },
+        "target_field": {
+          "type": "string",
+          "description": "Target field name for cross-contract checks",
+          "minLength": 1,
+          "default": "address"
+        },
+        "source_args": {
+          "type": "array",
+          "description": "Arguments for source function in cross-contract checks",
+          "items": {}
+        },
+        "proxy_pattern": {
+          "type": "string",
+          "enum": ["erc1967", "eip1822", "beacon", "custom"],
+          "description": "Proxy pattern to verify"
+        },
+        "proxy_check": {
+          "type": "string",
+          "enum": ["implementation", "admin", "beacon"],
+          "description": "Proxy field to check"
+        },
+        "role": {
+          "type": "string",
+          "description": "Role hash (bytes32) for access control",
+          "pattern": "^0x[a-fA-F0-9]{64}$",
+          "examples": ["0x0000000000000000000000000000000000000000000000000000000000000000"]
+        },
+        "role_name": {
+          "type": "string",
+          "description": "Human-readable role name",
+          "minLength": 1,
+          "examples": ["DEFAULT_ADMIN_ROLE", "MINTER_ROLE", "PAUSER_ROLE"]
+        },
+        "members": {
+          "type": "array",
+          "description": "Expected role members (addresses)",
+          "items": {
+            "type": "string",
+            "pattern": "^(0x[a-fA-F0-9]{40}|\\$\\{[A-Z_][A-Z0-9_]*\\})$"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of this check",
+          "maxLength": 500
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable/disable this specific check",
+          "default": true
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low", "info"],
+          "description": "Severity level for this check",
+          "default": "high"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "owner" } }
+          },
+          "then": {
+            "required": ["value"],
+            "errorMessage": "type 'owner' requires 'value' field"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "role" } }
+          },
+          "then": {
+            "anyOf": [
+              { "required": ["role"] },
+              { "required": ["role_name"] }
+            ],
+            "required": ["members"],
+            "errorMessage": "type 'role' requires either 'role' or 'role_name', and 'members'"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "variable" } }
+          },
+          "then": {
+            "required": ["variable", "value"],
+            "errorMessage": "type 'variable' requires 'variable' and 'value' fields"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "function_call" } }
+          },
+          "then": {
+            "required": ["function", "value"],
+            "errorMessage": "type 'function_call' requires 'function' and 'value' fields"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "storage_slot" } }
+          },
+          "then": {
+            "anyOf": [
+              { "required": ["slot"] },
+              { "required": ["slot_name"] }
+            ],
+            "required": ["value"],
+            "errorMessage": "type 'storage_slot' requires either 'slot' or 'slot_name', and 'value'"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "cross_contract" } }
+          },
+          "then": {
+            "required": ["source_contract", "source_function", "target_contract"],
+            "errorMessage": "type 'cross_contract' requires 'source_contract', 'source_function', and 'target_contract'"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "aggregate" } }
+          },
+          "then": {
+            "required": ["operation", "function", "value"],
+            "errorMessage": "type 'aggregate' requires 'operation', 'function', and 'value'"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "conditional" } }
+          },
+          "then": {
+            "required": ["condition", "value"],
+            "errorMessage": "type 'conditional' requires 'condition' and 'value'"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "time_based" } }
+          },
+          "then": {
+            "required": ["function", "max_age_seconds"],
+            "errorMessage": "type 'time_based' requires 'function' and 'max_age_seconds'"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "comparison" } }
+          },
+          "then": {
+            "required": ["left", "right", "operator"],
+            "errorMessage": "type 'comparison' requires 'left', 'right', and 'operator'"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "array_state" } }
+          },
+          "then": {
+            "required": ["function", "check"],
+            "errorMessage": "type 'array_state' requires 'function' and 'check'"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "mapping_state" } }
+          },
+          "then": {
+            "required": ["function", "key", "value"],
+            "errorMessage": "type 'mapping_state' requires 'function', 'key', and 'value'"
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "proxy" } }
+          },
+          "then": {
+            "required": ["proxy_pattern", "proxy_check", "value"],
+            "errorMessage": "type 'proxy' requires 'proxy_pattern', 'proxy_check', and 'value'"
+          }
+        }
+      ]
+    },
+    "ConditionalConfig": {
+      "type": "object",
+      "description": "Conditional check configuration",
+      "required": ["operator", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["variable", "function_call", "storage_slot", "cross_contract"],
+          "description": "Type of condition check"
+        },
+        "variable": { 
+          "type": "string",
+          "minLength": 1
+        },
+        "function": { 
+          "type": "string",
+          "minLength": 1
+        },
+        "args": { 
+          "type": "array",
+          "items": {}
+        },
+        "slot": { 
+          "type": "string",
+          "pattern": "^0x[a-fA-F0-9]{64}$"
+        },
+        "slot_name": { 
+          "type": "string",
+          "enum": ["IMPLEMENTATION_SLOT", "ADMIN_SLOT", "BEACON_SLOT"]
+        },
+        "source_contract": { 
+          "type": "string",
+          "minLength": 1
+        },
+        "source_function": { 
+          "type": "string",
+          "minLength": 1
+        },
+        "source_args": { 
+          "type": "array",
+          "items": {}
+        },
+        "operator": {
+          "type": "string",
+          "enum": [
+            "equals",
+            "not_equals",
+            "greater_than",
+            "less_than",
+            "greater_than_or_equal",
+            "less_than_or_equal",
+            "contains",
+            "contains_all",
+            "contains_any",
+            "starts_with",
+            "ends_with"
+          ]
+        },
+        "value": {
+          "description": "Value to compare against"
+        },
+        "compare_to": {
+          "type": "string",
+          "enum": ["block_timestamp", "block_number"],
+          "description": "Compare against blockchain state"
+        }
+      }
+    },
+    "ComparisonSource": {
+      "type": "object",
+      "description": "Source for comparison operations",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["variable", "function_call", "cross_contract", "constant", "aggregate"],
+          "description": "Type of comparison source"
+        },
+        "variable": { 
+          "type": "string",
+          "minLength": 1
+        },
+        "function": { 
+          "type": "string",
+          "minLength": 1
+        },
+        "args": { 
+          "type": "array",
+          "items": {}
+        },
+        "source_contract": { 
+          "type": "string",
+          "minLength": 1
+        },
+        "source_function": { 
+          "type": "string",
+          "minLength": 1
+        },
+        "source_args": { 
+          "type": "array",
+          "items": {}
+        },
+        "operation": {
+          "type": "string",
+          "enum": ["sum", "average", "count", "min", "max"]
+        },
+        "args_source": {
+          "type": "string",
+          "enum": ["list", "function"]
+        },
+        "args_function": { 
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "description": "Constant value (for type: constant)"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "variable" } }
+          },
+          "then": {
+            "required": ["variable"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "function_call" } }
+          },
+          "then": {
+            "required": ["function"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "cross_contract" } }
+          },
+          "then": {
+            "required": ["source_contract", "source_function"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "constant" } }
+          },
+          "then": {
+            "required": ["value"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "aggregate" } }
+          },
+          "then": {
+            "required": ["operation", "function"]
+          }
+        }
+      ]
+    }
+  }
+}

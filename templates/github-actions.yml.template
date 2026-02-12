@@ -1,0 +1,58 @@
+# Nodrift Contract Verification - GitHub Actions Template
+# Copy this file to .github/workflows/verify-contracts.yml
+
+name: Contract Verification
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 */6 * * *'  # Run every 6 hours
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install Nodrift
+        run: npm install -g nodrift
+      
+      - name: Verify Contracts
+        env:
+          RPC_URL: ${{ secrets.RPC_URL }}
+          CONTRACT_ADDRESS: ${{ secrets.CONTRACT_ADDRESS }}
+          EXPECTED_OWNER: ${{ secrets.EXPECTED_OWNER }}
+        run: |
+          nodrift nodrift.yaml --fail-on-drift --output junit
+      
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: test-results/nodrift-junit.xml
+          check_name: Contract Verification Results
+      
+      - name: Upload Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: verification-results
+          path: test-results/
+
+# Required Secrets:
+# - RPC_URL: Your RPC endpoint (e.g., Alchemy, Infura)
+# - CONTRACT_ADDRESS: Contract address to verify
+# - EXPECTED_OWNER: Expected owner address
+# Add more secrets as needed for your configuration

@@ -1,0 +1,165 @@
+# Liquidity Pool Health Monitoring
+# This example demonstrates monitoring DEX pool health and balance ratios
+# Useful for detecting imbalanced pools or liquidity issues
+
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  # USDC/WETH Uniswap V2 Pair
+  USDC_WETH_Pair:
+    address: "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"
+    abi:
+      - name: getReserves
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint112
+            name: reserve0
+          - type: uint112
+            name: reserve1
+          - type: uint32
+            name: blockTimestampLast
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: token0
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: token1
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+    
+    state:
+      # Verify tokens are correct
+      - type: function_call
+        function: token0
+        args: []
+        value: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  # USDC
+        options:
+          ignore_case: true
+      
+      - type: function_call
+        function: token1
+        args: []
+        value: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"  # WETH
+        options:
+          ignore_case: true
+      
+      # Check pool has significant liquidity (LP tokens)
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: "1000000000000000000"  # At least 1 LP token
+        options:
+          comparison: greater_than
+  
+  # Check USDC balance in pool
+  USDC_Pool_Balance:
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  # USDC
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # Pool should have significant USDC reserves
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]  # USDC/WETH pair
+        value: "10000000000"  # At least 10M USDC (6 decimals)
+        options:
+          comparison: greater_than
+        metric:
+          name: "usdc_pool_liquidity"
+          category: "liquidity"
+          severity: "high"
+          description: "Pool must maintain healthy USDC reserves"
+      
+      # Alert if USDC reserves drop too low (liquidity crisis)
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "1000000000"  # Should be more than 1M USDC
+        options:
+          comparison: greater_than
+        metric:
+          name: "usdc_minimum_reserves"
+          category: "solvency"
+          severity: "critical"
+          description: "CRITICAL: Pool reserves below minimum threshold"
+  
+  # Check WETH balance in pool
+  WETH_Pool_Balance:
+    address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"  # WETH
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # Pool should have significant WETH reserves
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]  # USDC/WETH pair
+        value: "1000000000000000000"  # At least 1 WETH
+        options:
+          comparison: greater_than
+      
+      # Alert if WETH reserves drop too low
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "100000000000000000"  # Should be more than 0.1 WETH
+        options:
+          comparison: greater_than
+  
+  # DAI/USDC Curve Pool - Stablecoin pool health
+  DAI_Balance_Curve:
+    address: "0x6B175474E89094C44Da98b954EedeAC495271d0F"  # DAI
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # Curve 3pool should have significant DAI
+      - type: function_call
+        function: balanceOf
+        args: ["0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7"]  # Curve 3pool
+        value: "10000000000000000000000000"  # At least 10M DAI
+        options:
+          comparison: greater_than
+      
+      # Check DAI isn't too concentrated (imbalanced pool)
+      - type: function_call
+        function: balanceOf
+        args: ["0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7"]
+        value: "1000000000000000000000000000"  # Less than 1B DAI
+        options:
+          comparison: less_than

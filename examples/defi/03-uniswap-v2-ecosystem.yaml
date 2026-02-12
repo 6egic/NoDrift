@@ -1,0 +1,158 @@
+# Uniswap V2 Ecosystem Verification
+# This example demonstrates verifying multiple related contracts
+# Shows how Router, Factory, and Pairs work together
+
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  # Uniswap V2 Router
+  UniswapV2Router:
+    address: "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
+    abi:
+      - name: factory
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: WETH
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+    
+    state:
+      # Verify router points to correct factory
+      - type: function_call
+        function: factory
+        args: []
+        value: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
+        options:
+          ignore_case: true
+      
+      # Verify WETH address
+      - type: function_call
+        function: WETH
+        args: []
+        value: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        options:
+          ignore_case: true
+  
+  # Uniswap V2 Factory
+  UniswapV2Factory:
+    address: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
+    abi:
+      - name: feeTo
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: feeToSetter
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: allPairsLength
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: getPair
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+          - type: address
+        outputs:
+          - type: address
+    
+    state:
+      # Check fee recipient (should be set or zero address)
+      - type: function_call
+        function: feeTo
+        args: []
+        value: "0xf38521f130fcCF29dB1961597bc5d2B60F995f85"
+        options:
+          ignore_case: true
+      
+      # Check fee setter (governance address)
+      - type: function_call
+        function: feeToSetter
+        args: []
+        value: "0x1a9C8182C09F50C8318d769245beA52c32BE35BC"
+        options:
+          ignore_case: true
+      
+      # Verify factory has created many pairs
+      - type: function_call
+        function: allPairsLength
+        args: []
+        value: 100000  # At least 100k pairs
+        options:
+          comparison: greater_than
+      
+      # Verify USDC/WETH pair exists and matches known address
+      - type: function_call
+        function: getPair
+        args: 
+          - "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  # USDC
+          - "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"  # WETH
+        value: "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"
+        options:
+          ignore_case: true
+  
+  # USDC/WETH Pair
+  USDC_WETH_Pair:
+    address: "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"
+    abi:
+      - name: factory
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: token0
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: token1
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+    
+    state:
+      # Verify pair was created by the factory
+      - type: function_call
+        function: factory
+        args: []
+        value: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
+        options:
+          ignore_case: true
+      
+      # Verify token0 is USDC
+      - type: function_call
+        function: token0
+        args: []
+        value: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+        options:
+          ignore_case: true
+      
+      # Verify token1 is WETH
+      - type: function_call
+        function: token1
+        args: []
+        value: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        options:
+          ignore_case: true

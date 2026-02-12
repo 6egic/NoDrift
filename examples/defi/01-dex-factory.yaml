@@ -1,0 +1,39 @@
+# Simple Uniswap V2 Factory Test Example
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  UniswapV2Factory:
+    address: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"  # Uniswap V2 Factory on Ethereum mainnet
+    abi:
+      - name: feeTo
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: feeToSetter
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: allPairsLength
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+    state:
+      - type: function_call
+        function: feeTo
+        args: []
+        value: "0x0000000000000000000000000000000000000000"
+      
+      - type: function_call
+        function: feeToSetter
+        args: []
+        value: "0x0000000000000000000000000000000000000000"

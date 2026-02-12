@@ -1,0 +1,109 @@
+# Treasury Allocation Monitoring
+# This example demonstrates monitoring a DAO treasury's asset allocation
+# Using Uniswap Treasury as an example
+
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  # Monitor UNI token holdings in treasury
+  UNI_Treasury_Holdings:
+    address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"  # UNI token
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+    
+    state:
+      # Check treasury UNI balance
+      - type: function_call
+        function: balanceOf
+        args: ["0x1a9C8182C09F50C8318d769245beA52c32BE35BC"]  # Uniswap Treasury
+        value: "100000000000000000000000000"  # At least 100M UNI
+        options:
+          comparison: greater_than
+      
+      # Verify treasury holds significant % of total supply
+      # Treasury should have 400M+ UNI (40% of 1B supply)
+      - type: function_call
+        function: balanceOf
+        args: ["0x1a9C8182C09F50C8318d769245beA52c32BE35BC"]
+        value: "400000000000000000000000000"  # 400M UNI
+        options:
+          tolerance: "10%"
+  
+  # Monitor USDC holdings (stablecoin reserves)
+  USDC_Treasury_Holdings:
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  # USDC
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # Check treasury has USDC reserves
+      - type: function_call
+        function: balanceOf
+        args: ["0x1a9C8182C09F50C8318d769245beA52c32BE35BC"]
+        value: "1000000"  # At least 1 USDC (treasury may have minimal stables)
+        options:
+          comparison: greater_than
+  
+  # Monitor WETH holdings (ETH exposure)
+  WETH_Treasury_Holdings:
+    address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"  # WETH
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # Check treasury WETH balance
+      - type: function_call
+        function: balanceOf
+        args: ["0x1a9C8182C09F50C8318d769245beA52c32BE35BC"]
+        value: "1000000000000000000"  # At least 1 WETH
+        options:
+          comparison: greater_than
+  
+  # Monitor DAI holdings (stablecoin diversification)
+  DAI_Treasury_Holdings:
+    address: "0x6B175474E89094C44Da98b954EedeAC495271d0F"  # DAI
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # Check treasury DAI balance
+      - type: function_call
+        function: balanceOf
+        args: ["0x1a9C8182C09F50C8318d769245beA52c32BE35BC"]
+        value: "1000000000000000000"  # At least 1 DAI
+        options:
+          comparison: greater_than

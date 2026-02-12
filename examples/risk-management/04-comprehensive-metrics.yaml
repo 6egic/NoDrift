@@ -1,0 +1,309 @@
+# Comprehensive Risk Metrics Example
+# This example demonstrates the full metrics and severity system
+# Shows how to track drift severity, risk metrics, and health scores
+
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  # ============================================================================
+  # USDC - Stablecoin Supply and Distribution Monitoring
+  # ============================================================================
+  USDC:
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    abi:
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+      - name: symbol
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+    
+    state:
+      # Identity verification - LOW severity (should never change)
+      - type: function_call
+        function: symbol
+        args: []
+        value: "USDC"
+        metric:
+          name: "token_identity"
+          category: "integrity"
+          severity: "critical"
+          description: "Token symbol must match - indicates contract replacement if fails"
+      
+      # Total supply monitoring - MEDIUM severity (changes are expected)
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: "40000000000000"  # ~40B USDC
+        options:
+          tolerance: "30%"
+        metric:
+          name: "total_supply_drift"
+          category: "supply"
+          severity: "medium"
+          description: "Track USDC supply changes for market analysis"
+      
+      # Aave V3 exposure - HIGH severity (protocol risk)
+      - type: function_call
+        function: balanceOf
+        args: ["0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c"]  # Aave V3
+        value: "100000000000"  # At least 100M USDC
+        options:
+          comparison: greater_than
+        metric:
+          name: "aave_liquidity_health"
+          category: "liquidity"
+          severity: "high"
+          description: "Aave must maintain minimum USDC liquidity"
+      
+      # Compound V3 exposure - HIGH severity (protocol risk)
+      - type: function_call
+        function: balanceOf
+        args: ["0xc3d688B66703497DAA19211EEdff47f25384cdc3"]  # Compound V3
+        value: "50000000000"  # At least 50M USDC
+        options:
+          comparison: greater_than
+        metric:
+          name: "compound_liquidity_health"
+          category: "liquidity"
+          severity: "high"
+          description: "Compound must maintain minimum USDC liquidity"
+      
+      # Binance concentration - CRITICAL severity (systemic risk)
+      - type: function_call
+        function: balanceOf
+        args: ["0x28C6c06298d514Db089934071355E5743bf21d60"]  # Binance
+        value: "10000000000000"  # Less than 10B (25% of supply)
+        options:
+          comparison: less_than
+        metric:
+          name: "exchange_concentration_risk"
+          category: "risk"
+          severity: "critical"
+          description: "Single exchange holding >25% creates systemic risk"
+      
+      # Circle Treasury - CRITICAL severity (backing verification)
+      - type: function_call
+        function: balanceOf
+        args: ["0x55FE002aefF02F77364de339a1292923A15844B8"]  # Circle
+        value: "1000000000"  # At least 1B USDC
+        options:
+          comparison: greater_than
+        metric:
+          name: "issuer_reserves"
+          category: "solvency"
+          severity: "critical"
+          description: "Issuer must maintain reserves for redemptions"
+  
+  # ============================================================================
+  # Uniswap V2 USDC/WETH Pool - Liquidity Health Monitoring
+  # ============================================================================
+  USDC_WETH_Pool:
+    address: "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"
+    abi:
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: token0
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: token1
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+    
+    state:
+      # Pool integrity - CRITICAL severity
+      - type: function_call
+        function: token0
+        args: []
+        value: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+        options:
+          ignore_case: true
+        metric:
+          name: "pool_token0_integrity"
+          category: "integrity"
+          severity: "critical"
+          description: "Pool token0 must be USDC - indicates pool replacement if fails"
+      
+      - type: function_call
+        function: token1
+        args: []
+        value: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        options:
+          ignore_case: true
+        metric:
+          name: "pool_token1_integrity"
+          category: "integrity"
+          severity: "critical"
+          description: "Pool token1 must be WETH - indicates pool replacement if fails"
+      
+      # Liquidity depth - HIGH severity
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: "10000000000000000000"  # At least 10 LP tokens
+        options:
+          comparison: greater_than
+        metric:
+          name: "pool_liquidity_depth"
+          category: "liquidity"
+          severity: "high"
+          description: "Pool must maintain minimum liquidity for efficient trading"
+  
+  # ============================================================================
+  # USDC Reserves in Pool - Solvency Check
+  # ============================================================================
+  USDC_Pool_Reserves:
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  # USDC
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # Minimum reserves - CRITICAL severity (solvency)
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "1000000000"  # Must be > 1M USDC
+        options:
+          comparison: greater_than
+        metric:
+          name: "pool_minimum_reserves"
+          category: "solvency"
+          severity: "critical"
+          description: "Pool reserves below minimum indicates liquidity crisis"
+      
+      # Healthy reserves - HIGH severity
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "10000000000"  # Should be > 10M USDC
+        options:
+          comparison: greater_than
+        metric:
+          name: "pool_healthy_reserves"
+          category: "liquidity"
+          severity: "high"
+          description: "Pool should maintain healthy reserves for normal operations"
+  
+  # ============================================================================
+  # WETH Reserves in Pool - Solvency Check
+  # ============================================================================
+  WETH_Pool_Reserves:
+    address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"  # WETH
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # Minimum reserves - CRITICAL severity
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "100000000000000000"  # Must be > 0.1 WETH
+        options:
+          comparison: greater_than
+        metric:
+          name: "pool_minimum_weth_reserves"
+          category: "solvency"
+          severity: "critical"
+          description: "WETH reserves below minimum indicates liquidity crisis"
+      
+      # Healthy reserves - HIGH severity
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "1000000000000000000"  # Should be > 1 WETH
+        options:
+          comparison: greater_than
+        metric:
+          name: "pool_healthy_weth_reserves"
+          category: "liquidity"
+          severity: "high"
+          description: "Pool should maintain healthy WETH reserves"
+  
+  # ============================================================================
+  # Uniswap V2 Factory - System Integrity
+  # ============================================================================
+  UniswapV2_Factory:
+    address: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
+    abi:
+      - name: getPair
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+          - type: address
+        outputs:
+          - type: address
+      - name: feeTo
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+    
+    state:
+      # Factory pair verification - CRITICAL severity
+      - type: function_call
+        function: getPair
+        args:
+          - "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+          - "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        value: "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"
+        options:
+          ignore_case: true
+        metric:
+          name: "factory_pair_integrity"
+          category: "integrity"
+          severity: "critical"
+          description: "Factory must recognize pool - indicates system compromise if fails"
+      
+      # Fee recipient monitoring - MEDIUM severity
+      - type: function_call
+        function: feeTo
+        args: []
+        value: "0xf38521f130fcCF29dB1961597bc5d2B60F995f85"
+        options:
+          ignore_case: true
+        metric:
+          name: "fee_recipient_drift"
+          category: "governance"
+          severity: "medium"
+          description: "Track fee recipient changes for governance monitoring"

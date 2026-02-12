@@ -1,0 +1,89 @@
+# ERC20 Token with Balance and Allowance Checks
+# This example demonstrates checking token balances and allowances
+# Using USDC on Ethereum mainnet
+
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  USDC:
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    abi:
+      - name: symbol
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+      - name: name
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+      - name: decimals
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint8
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+            name: account
+        outputs:
+          - type: uint256
+      - name: allowance
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+            name: owner
+          - type: address
+            name: spender
+        outputs:
+          - type: uint256
+    
+    state:
+      # Basic token properties
+      - type: function_call
+        function: symbol
+        args: []
+        value: "USDC"
+      
+      - type: function_call
+        function: name
+        args: []
+        value: "USD Coin"
+      
+      - type: function_call
+        function: decimals
+        args: []
+        value: 6
+      
+      # Check total supply is within reasonable range (USDC supply changes)
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: 40000000000000  # ~40B USDC (6 decimals)
+        options:
+          tolerance: "50%"  # Allow wide variance as supply changes
+      
+      # Check Uniswap V2 Router has some USDC balance
+      - type: function_call
+        function: balanceOf
+        args: ["0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"]
+        value: 1000000  # At least 1 USDC
+        options:
+          comparison: greater_than

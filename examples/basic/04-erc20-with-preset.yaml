@@ -1,0 +1,60 @@
+# ERC20 Token Using Preset
+# This example demonstrates using the erc20 preset
+# The preset automatically provides the ABI - no need to define it manually!
+
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  # Example WITHOUT preset - requires manual ABI definition
+  USDC_Manual:
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    abi:
+      - name: symbol
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+      - name: decimals
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint8
+    state:
+      - type: function_call
+        function: symbol
+        args: []
+        value: "USDC"
+      
+      - type: function_call
+        function: decimals
+        args: []
+        value: 6
+  
+  # Example WITH preset - ABI provided automatically!
+  DAI_WithPreset:
+    preset: erc20  # Preset provides ABI automatically
+    address: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+    state:
+      # No need to define ABI - preset includes it
+      # Just add your custom checks
+      
+      - type: function_call
+        function: symbol
+        args: []
+        value: "DAI"
+      
+      - type: function_call
+        function: decimals
+        args: []
+        value: 18
+      
+      - type: function_call
+        function: name
+        args: []
+        value: "Dai Stablecoin"

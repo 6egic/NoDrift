@@ -1,0 +1,5 @@
+# Ignore example environment files with real secrets
+# Keep .env.example files for reference
+*.env
+!.env.example
+

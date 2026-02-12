@@ -1,0 +1,115 @@
+# yaml-language-server: $schema=../../nodrift.schema.json
+version: 1.0
+
+# Chainlink Oracle Monitoring with Time-Based Verification
+# 
+# This example demonstrates monitoring Chainlink price feeds for freshness
+# using the latestTimestamp() function which returns a single uint256 value.
+#
+# Note: Chainlink aggregators provide latestTimestamp() which returns just
+# the timestamp, making it compatible with time_based verification.
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+  timeout: 30000
+
+contracts:
+  # Chainlink ETH/USD Price Feed
+  ChainlinkETHUSD:
+    address: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
+    abi:
+      - "function latestTimestamp() view returns (uint256)"
+      - "function latestAnswer() view returns (int256)"
+      - "function decimals() view returns (uint8)"
+      - "function description() view returns (string)"
+    
+    state:
+      # Verify price feed is updated within last 1 hour
+      - type: time_based
+        function: latestTimestamp
+        max_age_seconds: 3600  # 1 hour
+        options:
+          description: "ETH/USD price feed must be fresh"
+      
+      # Verify price is positive
+      - type: function_call
+        function: latestAnswer
+        value: "0"
+        options:
+          comparison: ">"
+          description: "Price must be positive"
+      
+      # Verify feed metadata
+      - type: function_call
+        function: decimals
+        value: 8
+      
+      - type: function_call
+        function: description
+        value: "ETH / USD"
+
+  # Chainlink BTC/USD Price Feed
+  ChainlinkBTCUSD:
+    address: "0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c"
+    abi:
+      - "function latestTimestamp() view returns (uint256)"
+      - "function latestAnswer() view returns (int256)"
+      - "function decimals() view returns (uint8)"
+      - "function description() view returns (string)"
+    
+    state:
+      # Verify price feed is updated within last 1 hour
+      - type: time_based
+        function: latestTimestamp
+        max_age_seconds: 3600
+        options:
+          description: "BTC/USD price feed must be fresh"
+      
+      # Verify price is positive
+      - type: function_call
+        function: latestAnswer
+        value: "0"
+        options:
+          comparison: ">"
+          description: "Price must be positive"
+      
+      # Verify decimals
+      - type: function_call
+        function: decimals
+        value: 8
+      
+      # Verify description
+      - type: function_call
+        function: description
+        value: "BTC / USD"
+
+  # Chainlink USDC/USD Price Feed
+  ChainlinkUSDCUSD:
+    address: "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6"
+    abi:
+      - "function latestTimestamp() view returns (uint256)"
+      - "function latestAnswer() view returns (int256)"
+      - "function decimals() view returns (uint8)"
+    
+    state:
+      # Verify price feed is updated within last 24 hours
+      # (Stablecoin feeds update less frequently)
+      - type: time_based
+        function: latestTimestamp
+        max_age_seconds: 86400  # 24 hours
+        options:
+          description: "USDC/USD price feed must be updated daily"
+      
+      # Verify price is close to $1 (with 8 decimals = 100000000)
+      - type: function_call
+        function: latestAnswer
+        value: "100000000"  # $1.00 with 8 decimals
+        options:
+          tolerance: "5%"  # Allow 5% deviation
+          description: "USDC price should be close to $1"
+      
+      # Verify decimals
+      - type: function_call
+        function: decimals
+        value: 8

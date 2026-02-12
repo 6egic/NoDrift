@@ -1,0 +1,110 @@
+# USDC Distribution and Concentration Risk Monitoring
+# This example monitors USDC distribution across major DeFi protocols
+# Useful for assessing concentration risk and protocol exposure
+
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  USDC:
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+    abi:
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+      - name: symbol
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+    
+    state:
+      # Verify token identity
+      - type: function_call
+        function: symbol
+        args: []
+        value: "USDC"
+      
+      # Monitor total supply
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: "40000000000000"  # ~40B USDC (6 decimals)
+        options:
+          tolerance: "30%"  # USDC supply changes frequently
+        metric:
+          name: "total_supply_drift"
+          category: "supply"
+          severity: "medium"
+          description: "USDC total supply deviation from baseline"
+      
+      # === Major DeFi Protocol Exposure ===
+      
+      # Aave V3 USDC Pool - Lending protocol exposure
+      - type: function_call
+        function: balanceOf
+        args: ["0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c"]  # Aave V3 USDC
+        value: "100000000000"  # At least 100M USDC
+        options:
+          comparison: greater_than
+      
+      # Compound V3 USDC - Lending protocol exposure
+      - type: function_call
+        function: balanceOf
+        args: ["0xc3d688B66703497DAA19211EEdff47f25384cdc3"]  # Compound V3 USDC
+        value: "50000000000"  # At least 50M USDC
+        options:
+          comparison: greater_than
+      
+      # Uniswap V3 USDC/WETH Pool - DEX liquidity
+      - type: function_call
+        function: balanceOf
+        args: ["0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640"]  # Uniswap V3 USDC/WETH
+        value: "10000000000"  # At least 10M USDC
+        options:
+          comparison: greater_than
+      
+      # Curve 3pool - Stablecoin liquidity
+      - type: function_call
+        function: balanceOf
+        args: ["0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7"]  # Curve 3pool
+        value: "50000000000"  # At least 50M USDC
+        options:
+          comparison: greater_than
+      
+      # Circle (USDC Issuer) Treasury - Should have reserves
+      - type: function_call
+        function: balanceOf
+        args: ["0x55FE002aefF02F77364de339a1292923A15844B8"]  # Circle Treasury
+        value: "1000000000"  # At least 1B USDC
+        options:
+          comparison: greater_than
+      
+      # === Risk Monitoring: Check no single address has too much ===
+      
+      # Binance Hot Wallet - Exchange concentration risk
+      - type: function_call
+        function: balanceOf
+        args: ["0x28C6c06298d514Db089934071355E5743bf21d60"]  # Binance 14
+        value: "10000000000000"  # Should be less than 10B (25% of supply)
+        options:
+          comparison: less_than
+        metric:
+          name: "exchange_concentration_risk"
+          category: "risk"
+          severity: "critical"
+          description: "Single exchange should not hold >25% of total supply"

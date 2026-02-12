@@ -1,0 +1,209 @@
+# Multi-Pool Comparison - Advanced Liquidity Analysis
+# This example demonstrates comparing multiple pools to detect anomalies
+# Useful for identifying which pools have healthy liquidity vs depleted pools
+
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  # Pool 1: USDC/WETH - Major trading pair
+  USDC_WETH_Pool:
+    address: "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"
+    abi:
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: token0
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: token1
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+    
+    state:
+      # Verify pool has significant liquidity
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: "10000000000000000000"  # At least 10 LP tokens
+        options:
+          comparison: greater_than
+      
+      # Verify token addresses
+      - type: function_call
+        function: token0
+        args: []
+        value: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+        options:
+          ignore_case: true
+      
+      - type: function_call
+        function: token1
+        args: []
+        value: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        options:
+          ignore_case: true
+  
+  # Pool 2: DAI/WETH - Another major pair
+  DAI_WETH_Pool:
+    address: "0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11"
+    abi:
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: token0
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: token1
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+    
+    state:
+      # Verify pool has significant liquidity
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: "10000000000000000000"  # At least 10 LP tokens
+        options:
+          comparison: greater_than
+      
+      # Verify token addresses
+      - type: function_call
+        function: token0
+        args: []
+        value: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+        options:
+          ignore_case: true
+      
+      - type: function_call
+        function: token1
+        args: []
+        value: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        options:
+          ignore_case: true
+  
+  # Pool 3: USDT/WETH - Third major pair
+  USDT_WETH_Pool:
+    address: "0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"
+    abi:
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: token0
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: token1
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+    
+    state:
+      # Verify pool has significant liquidity
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: "10000000000000000000"  # At least 10 LP tokens
+        options:
+          comparison: greater_than
+      
+      # Verify token addresses
+      - type: function_call
+        function: token0
+        args: []
+        value: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        options:
+          ignore_case: true
+      
+      - type: function_call
+        function: token1
+        args: []
+        value: "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+        options:
+          ignore_case: true
+  
+  # Compare USDC balances across all three pools
+  USDC_Distribution:
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  # USDC
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # USDC/WETH pool should have significant USDC
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "10000000000"  # At least 10M USDC
+        options:
+          comparison: greater_than
+  
+  # Compare WETH balances across all three pools
+  WETH_Distribution:
+    address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"  # WETH
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # USDC/WETH pool WETH balance
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "1000000000000000000"  # At least 1 WETH
+        options:
+          comparison: greater_than
+      
+      # DAI/WETH pool WETH balance
+      - type: function_call
+        function: balanceOf
+        args: ["0xA478c2975Ab1Ea89e8196811F51A7B7Ade33eB11"]
+        value: "1000000000000000000"  # At least 1 WETH
+        options:
+          comparison: greater_than
+      
+      # USDT/WETH pool WETH balance
+      - type: function_call
+        function: balanceOf
+        args: ["0x0d4a11d5EEaaC28EC3F61d100daF4d40471f1852"]
+        value: "1000000000000000000"  # At least 1 WETH
+        options:
+          comparison: greater_than

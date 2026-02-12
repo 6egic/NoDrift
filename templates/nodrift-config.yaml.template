@@ -1,0 +1,211 @@
+# yaml-language-server: $schema=../nodrift.schema.json
+# Nodrift Configuration Template
+# Copy this file to your project and customize for your contracts
+#
+# Usage:
+#   1. Copy this file: cp nodrift-config.yaml.template nodrift.yaml
+#   2. Create .env file with RPC_URL and other variables
+#   3. Replace placeholders with your contract addresses and values
+#   4. Test locally: nodrift nodrift.yaml
+#   5. Add to CI/CD (see docs/ci-cd-integration.md)
+#
+# Or use the interactive generator: nodrift init
+
+version: 1.0
+
+# Global network configuration
+network:
+  rpc_url: "${RPC_URL}"  # Required: Your RPC endpoint
+  chain_id: 1            # 1=Ethereum, 137=Polygon, 56=BSC, etc.
+
+# Contract definitions
+contracts:
+  # Example 1: ERC20 Token with Preset
+  MyToken:
+    preset: erc20  # Use built-in ERC20 preset (provides ABI)
+    address: "${TOKEN_ADDRESS}"
+    
+    state:
+      # Preset provides ABI - you define all checks
+      - type: function_call
+        function: symbol
+        args: []
+        value: "MTK"
+        metric:
+          name: "token_symbol"
+          category: "integrity"
+          severity: "critical"
+          description: "Token symbol must match"
+      
+      - type: function_call
+        function: decimals
+        args: []
+        value: 18
+        metric:
+          name: "token_decimals"
+          category: "integrity"
+          severity: "critical"
+          description: "Token decimals must match"
+      
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: "1000000000000000000000000"  # 1M tokens with 18 decimals
+        options:
+          tolerance: "1%"
+        metric:
+          name: "total_supply"
+          category: "supply"
+          severity: "high"
+          description: "Total supply should be ~1M tokens"
+      
+      - type: function_call
+        function: balanceOf
+        args: ["${TREASURY_ADDRESS}"]
+        value: "500000000000000000000000"  # 500K tokens
+        options:
+          tolerance: "5%"
+        metric:
+          name: "treasury_balance"
+          category: "liquidity"
+          severity: "high"
+          description: "Treasury should hold ~500K tokens"
+
+  # Example 2: Contract with Roles
+  MyGovernance:
+    address: "${GOVERNANCE_ADDRESS}"
+    abi:
+      - name: owner
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs: [{ type: address }]
+      
+      - name: hasRole
+        type: function
+        stateMutability: view
+        inputs:
+          - { name: role, type: bytes32 }
+          - { name: account, type: address }
+        outputs: [{ type: bool }]
+    
+    state:
+      - type: owner
+        value: "${TIMELOCK_ADDRESS}"
+        metric:
+          name: "governance_owner"
+          category: "integrity"
+          severity: "critical"
+          description: "Governance must be owned by timelock"
+      
+      - type: role
+        role_name: "DEFAULT_ADMIN_ROLE"
+        members:
+          - "${ADMIN_ADDRESS}"
+        metric:
+          name: "admin_role"
+          category: "governance"
+          severity: "critical"
+          description: "Verify admin role members"
+      
+      - type: role
+        role_name: "MINTER_ROLE"
+        members:
+          - "${MINTER_ADDRESS}"
+        metric:
+          name: "minter_role"
+          category: "governance"
+          severity: "high"
+          description: "Verify minter role members"
+
+  # Example 3: Proxy Contract
+  MyProxy:
+    address: "${PROXY_ADDRESS}"
+    abi: []  # Storage slots don't need ABI
+    
+    state:
+      - type: proxy
+        proxy_pattern: erc1967
+        proxy_check: implementation
+        value: "${IMPLEMENTATION_ADDRESS}"
+        metric:
+          name: "proxy_implementation"
+          category: "integrity"
+          severity: "critical"
+          description: "Verify proxy implementation address"
+      
+      - type: proxy
+        proxy_pattern: erc1967
+        proxy_check: admin
+        value: "${PROXY_ADMIN_ADDRESS}"
+        metric:
+          name: "proxy_admin"
+          category: "governance"
+          severity: "critical"
+          description: "Verify proxy admin address"
+
+  # Example 4: Custom Contract with Function Calls
+  MyVault:
+    address: "${VAULT_ADDRESS}"
+    abi:
+      - name: totalAssets
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs: [{ type: uint256 }]
+      
+      - name: paused
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs: [{ type: bool }]
+    
+    state:
+      - type: function_call
+        function: totalAssets
+        args: []
+        value: "10000000000000000000000000"  # 10M tokens
+        options:
+          tolerance: "5%"
+        metric:
+          name: "vault_total_assets"
+          category: "solvency"
+          severity: "high"
+          description: "Total assets in vault"
+      
+      - type: function_call
+        function: paused
+        args: []
+        value: false
+        metric:
+          name: "vault_pause_status"
+          category: "integrity"
+          severity: "critical"
+          description: "Verify vault is not paused"
+
+  # Example 5: Storage Slot Verification
+  MyUpgradeable:
+    address: "${UPGRADEABLE_ADDRESS}"
+    abi: []
+    
+    state:
+      - type: storage_slot
+        slot: "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
+        value: "${IMPLEMENTATION_ADDRESS}"
+        metric:
+          name: "implementation_slot"
+          category: "integrity"
+          severity: "critical"
+          description: "ERC1967 implementation slot"
+
+# Tips:
+# - Use environment variables for all secrets (addresses, RPC URLs)
+# - Create .env file in project root with RPC_URL and other variables
+# - Use presets when available (erc20, erc721, erc1155, erc4626, diamond, proxy, accessControl)
+# - Add metrics with severity (critical, high, medium, low) and category
+# - Add descriptions to document your checks
+# - Use options.tolerance for values that change (balances, supply)
+# - Use options.comparison for thresholds (greater_than, less_than)
+# - See docs/configuration.md for complete reference
+# - See examples/ directory for real-world examples
+# - See docs/ci-cd-integration.md for pipeline integration

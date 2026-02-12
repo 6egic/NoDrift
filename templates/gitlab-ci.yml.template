@@ -1,0 +1,37 @@
+# Nodrift Contract Verification - GitLab CI Template
+# Copy this file to .gitlab-ci.yml
+
+stages:
+  - verify
+
+verify-contracts:
+  stage: verify
+  image: node:18
+  script:
+    - npm install -g nodrift
+    - nodrift nodrift.yaml --fail-on-drift --output junit
+  artifacts:
+    reports:
+      junit: test-results/nodrift-junit.xml
+    paths:
+      - test-results/
+    when: always
+  only:
+    - main
+    - develop
+  variables:
+    RPC_URL: $RPC_URL
+    CONTRACT_ADDRESS: $CONTRACT_ADDRESS
+    EXPECTED_OWNER: $EXPECTED_OWNER
+
+# Optional: Scheduled verification
+verify-contracts-scheduled:
+  extends: verify-contracts
+  only:
+    - schedules
+
+# Required CI/CD Variables (Settings > CI/CD > Variables):
+# - RPC_URL: Your RPC endpoint
+# - CONTRACT_ADDRESS: Contract address to verify
+# - EXPECTED_OWNER: Expected owner address
+# Add more variables as needed for your configuration

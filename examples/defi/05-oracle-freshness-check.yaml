@@ -1,0 +1,104 @@
+# yaml-language-server: $schema=../../nodrift.schema.json
+version: 1.0
+
+# Time-Based State Verification Examples
+# 
+# This example demonstrates time-based verification to ensure
+# contract data is fresh and not stale.
+#
+# Use cases:
+# - Oracle price feed freshness monitoring
+# - Data feed staleness detection
+# - Timelock execution tracking
+#
+# Note: The function must return a Unix timestamp (uint256)
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+  timeout: 30000
+
+contracts:
+  # Custom Oracle with Simple Timestamp
+  # Note: Chainlink's latestRoundData() returns a tuple, which requires
+  # custom handling. This example uses a simpler oracle pattern.
+  CustomPriceFeed:
+    address: "${PRICE_FEED_ADDRESS}"
+    abi:
+      - "function lastUpdateTime() view returns (uint256)"
+      - "function getPrice() view returns (uint256)"
+      - "function decimals() view returns (uint8)"
+    
+    state:
+      # Verify price feed is updated within last 1 hour
+      - type: time_based
+        function: lastUpdateTime
+        max_age_seconds: 3600  # 1 hour
+        options:
+          description: "Price feed must be updated hourly"
+      
+      # Verify price is non-zero
+      - type: function_call
+        function: getPrice
+        value: "0"
+        options:
+          comparison: ">"
+          description: "Price must be greater than zero"
+      
+      # Verify decimals
+      - type: function_call
+        function: decimals
+        value: 8
+
+  # Data Feed with Timestamp Tracking
+  DataFeedOracle:
+    address: "${DATA_FEED_ADDRESS}"
+    abi:
+      - "function lastUpdateTimestamp() view returns (uint256)"
+      - "function getData() view returns (uint256)"
+      - "function isActive() view returns (bool)"
+    
+    state:
+      # Check data freshness (5 minute requirement)
+      - type: time_based
+        function: lastUpdateTimestamp
+        max_age_seconds: 300  # 5 minutes
+        options:
+          description: "Data feed must update every 5 minutes"
+      
+      # Verify feed is active
+      - type: function_call
+        function: isActive
+        value: true
+        options:
+          description: "Feed must be active"
+      
+      # Verify data is non-zero
+      - type: function_call
+        function: getData
+        value: "0"
+        options:
+          comparison: ">"
+          description: "Data must be greater than zero"
+
+  # Time-Locked Contract Example
+  TimeLock:
+    address: "${TIMELOCK_ADDRESS}"
+    abi:
+      - "function lastExecutionTime() view returns (uint256)"
+      - "function minDelay() view returns (uint256)"
+    
+    state:
+      # Ensure timelock was executed recently (within 30 days)
+      - type: time_based
+        function: lastExecutionTime
+        max_age_seconds: 2592000  # 30 days
+        options:
+          description: "Timelock should execute at least monthly"
+      
+      # Verify minimum delay is set correctly
+      - type: function_call
+        function: minDelay
+        value: "172800"  # 2 days in seconds
+        options:
+          description: "Minimum delay should be 2 days"

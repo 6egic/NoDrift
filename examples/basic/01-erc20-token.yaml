@@ -1,0 +1,44 @@
+# Simple USDC Token Test Example (without preset)
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  USDC:
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  # USDC on Ethereum mainnet
+    abi:
+      - name: symbol
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+      - name: name
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+      - name: decimals
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint8
+    state:
+      - type: function_call
+        function: symbol
+        args: []
+        value: "USDC"
+      
+      - type: function_call
+        function: name
+        args: []
+        value: "USD Coin"
+      
+      - type: function_call
+        function: decimals
+        args: []
+        value: 6

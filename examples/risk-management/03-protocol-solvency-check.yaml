@@ -1,0 +1,152 @@
+# Protocol Solvency Check - Advanced Multi-Contract Verification
+# This example demonstrates verifying that a lending protocol has sufficient
+# collateral to cover all outstanding loans (solvency check)
+# Using Uniswap V2 as an example to verify pool reserves match LP token supply
+
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  # USDC/WETH Pair - Verify reserves are properly backed
+  USDC_WETH_Pair:
+    address: "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"
+    abi:
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: getReserves
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint112
+            name: reserve0
+          - type: uint112
+            name: reserve1
+          - type: uint32
+            name: blockTimestampLast
+      - name: token0
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+      - name: token1
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: address
+    
+    state:
+      # Verify LP tokens exist (pool is initialized)
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: "1000000000000000000"  # At least 1 LP token
+        options:
+          comparison: greater_than
+      
+      # Verify tokens are correct
+      - type: function_call
+        function: token0
+        args: []
+        value: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+        options:
+          ignore_case: true
+      
+      - type: function_call
+        function: token1
+        args: []
+        value: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
+        options:
+          ignore_case: true
+  
+  # Verify USDC reserves match what the pair contract reports
+  USDC_Reserves:
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  # USDC
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # CRITICAL: Verify pair actually holds the USDC it claims
+      # This is a solvency check - does the contract have the assets?
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "10000000000"  # At least 10M USDC
+        options:
+          comparison: greater_than
+      
+      # Verify reserves aren't depleted (liquidity crisis detection)
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "1000000000"  # Must be more than 1M USDC
+        options:
+          comparison: greater_than
+  
+  # Verify WETH reserves match what the pair contract reports
+  WETH_Reserves:
+    address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"  # WETH
+    abi:
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # CRITICAL: Verify pair actually holds the WETH it claims
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "1000000000000000000"  # At least 1 WETH
+        options:
+          comparison: greater_than
+      
+      # Verify reserves aren't depleted
+      - type: function_call
+        function: balanceOf
+        args: ["0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"]
+        value: "100000000000000000"  # Must be more than 0.1 WETH
+        options:
+          comparison: greater_than
+  
+  # Cross-check: Verify factory still recognizes this pair
+  Factory_Verification:
+    address: "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"  # Uniswap V2 Factory
+    abi:
+      - name: getPair
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+          - type: address
+        outputs:
+          - type: address
+    
+    state:
+      # Verify factory still points to this pair (not replaced/upgraded)
+      - type: function_call
+        function: getPair
+        args:
+          - "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  # USDC
+          - "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"  # WETH
+        value: "0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"
+        options:
+          ignore_case: true

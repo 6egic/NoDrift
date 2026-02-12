@@ -1,0 +1,85 @@
+# DAI Stablecoin Supply Monitoring
+# This example demonstrates monitoring stablecoin supply and key holder balances
+# Useful for tracking supply changes and concentration risk
+
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  DAI:
+    address: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+    abi:
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+      - name: name
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+      - name: symbol
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+    
+    state:
+      # Verify token identity
+      - type: function_call
+        function: name
+        args: []
+        value: "Dai Stablecoin"
+      
+      - type: function_call
+        function: symbol
+        args: []
+        value: "DAI"
+      
+      # Monitor total supply - should be in reasonable range
+      # DAI supply fluctuates based on CDP activity
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: "3000000000000000000000000000"  # ~3B DAI
+        options:
+          tolerance: "50%"  # Allow wide variance as supply changes with market
+      
+      # Check MakerDAO PSM (Peg Stability Module) has significant DAI
+      # PSM helps maintain the peg
+      - type: function_call
+        function: balanceOf
+        args: ["0x89B78CfA322F6C5dE0aBcEecab66Aee45393cC5A"]  # PSM-USDC-A
+        value: "100000000000000000000000000"  # At least 100M DAI
+        options:
+          comparison: greater_than
+      
+      # Check Uniswap V3 DAI/USDC pool has liquidity
+      - type: function_call
+        function: balanceOf
+        args: ["0x5777d92f208679DB4b9778590Fa3CAB3aC9e2168"]  # Uniswap V3 DAI/USDC
+        value: "1000000000000000000000000"  # At least 1M DAI
+        options:
+          comparison: greater_than
+      
+      # Check Curve 3pool has DAI liquidity
+      - type: function_call
+        function: balanceOf
+        args: ["0xbEbc44782C7dB0a1A60Cb6fe97d0b483032FF1C7"]  # Curve 3pool
+        value: "10000000000000000000000000"  # At least 10M DAI
+        options:
+          comparison: greater_than

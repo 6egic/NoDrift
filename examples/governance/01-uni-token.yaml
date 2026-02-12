@@ -1,0 +1,76 @@
+# Uniswap Governance Token (UNI) Verification
+# This example demonstrates verifying a governance token
+# Using UNI token on Ethereum mainnet
+
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  UNI:
+    address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"  # UNI token
+    abi:
+      - name: name
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+      - name: symbol
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+      - name: decimals
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint8
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+      - name: balanceOf
+        type: function
+        stateMutability: view
+        inputs:
+          - type: address
+        outputs:
+          - type: uint256
+    
+    state:
+      # Basic token properties
+      - type: function_call
+        function: name
+        args: []
+        value: "Uniswap"
+      
+      - type: function_call
+        function: symbol
+        args: []
+        value: "UNI"
+      
+      - type: function_call
+        function: decimals
+        args: []
+        value: 18
+      
+      # UNI has fixed supply of 1 billion tokens
+      - type: function_call
+        function: totalSupply
+        args: []
+        value: "1000000000000000000000000000"  # 1B tokens (18 decimals)
+      
+      # Check Uniswap Treasury has significant UNI balance
+      - type: function_call
+        function: balanceOf
+        args: ["0x1a9C8182C09F50C8318d769245beA52c32BE35BC"]  # Uniswap Treasury
+        value: "100000000000000000000000000"  # At least 100M UNI
+        options:
+          comparison: greater_than

@@ -1,0 +1,50 @@
+# Simple DAI Token Test Example
+version: 1.0
+
+network:
+  rpc_url: "${RPC_URL}"
+  chain_id: 1
+
+contracts:
+  DAI:
+    address: "0x6B175474E89094C44Da98b954EedeAC495271d0F"  # DAI on Ethereum mainnet
+    abi:
+      - name: symbol
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+      - name: name
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: string
+      - name: decimals
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint8
+      - name: totalSupply
+        type: function
+        stateMutability: view
+        inputs: []
+        outputs:
+          - type: uint256
+    state:
+      - type: function_call
+        function: symbol
+        args: []
+        value: "DAI"
+      
+      - type: function_call
+        function: name
+        args: []
+        value: "Dai Stablecoin"
+      
+      - type: function_call
+        function: decimals
+        args: []
+        value: 18

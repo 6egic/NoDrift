@@ -1,0 +1,45 @@
+# Source files (only include dist in npm package)
+src/
+*.ts
+!*.d.ts
+tsconfig.json
+
+# Development files
+.eslintrc.json
+.prettierrc.json
+Makefile
+
+# Examples (keep these - they're useful)
+# examples/
+
+# Templates (keep these)
+# templates/
+
+# Documentation
+*.md
+!README.md
+
+# Tests
+test/
+tests/
+*.test.ts
+*.spec.ts
+coverage/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+*.yml.template
+
+# Environment
+.env*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
