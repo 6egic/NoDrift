@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D16-green.svg)](https://nodejs.org/)
 
-*Verify on-chain contract state matches your YAML configuration. Perfect for CI/CD pipelines, audits, and drift detection.*
+*Verify on-chain contract state matches your YAML configuration. <br> Perfect for CI/CD pipelines, audits, and drift detection.*
 
 [Getting Started](#quick-start) • [Documentation](docs/) • [Examples](examples/)
 
